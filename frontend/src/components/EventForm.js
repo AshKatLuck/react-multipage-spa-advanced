@@ -3,6 +3,8 @@ import {
   Form,
   useNavigation,
   useActionData,
+  json,
+  redirect,
 } from "react-router-dom";
 
 import classes from "./EventForm.module.css";
@@ -17,7 +19,7 @@ function EventForm({ method, event }) {
   }
 
   return (
-    <Form className={classes.form} method="POST">
+    <Form className={classes.form} method={method}>
       {data && data.errors && (
         <ul>
           {Object.values(data.errors).map((err) => (
@@ -75,6 +77,39 @@ function EventForm({ method, event }) {
       </div>
     </Form>
   );
+}
+
+export async function action({ request, params }) {
+  const data = await request.formData();
+  const eventData = {
+    title: data.get("title"),
+    image: data.get("image"),
+    date: data.get("date"),
+    description: data.get("description"),
+  };
+  let url = "http://localhost:8080/events";
+  if (request.method === "PATCH") {
+    const eventId = params.eventId;
+    url = "http://localhost:8080/events/" + eventId;
+  }
+
+  const response = await fetch(url, {
+    method: request.method,
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(eventData),
+  });
+  // console.log("Inside the Event Form action");
+  // console.log(response);
+  if (response.status === 422) {
+    return response;
+  }
+  if (!response.ok) {
+    throw json({ message: "Could not submit to db!" }, { status: 500 });
+  } else {
+    return redirect("/events");
+  }
 }
 
 export default EventForm;
